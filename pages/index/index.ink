@@ -39,8 +39,11 @@
 <script setup>
 import wx from 'wx';
 
-const BRIDGE_BASE_URL = "http://192.168.60.5:8766";
-const TURN_URL = `${BRIDGE_BASE_URL}/v1/session/turn`;
+const BRIDGE_AUTH_TOKEN = "__LAOK_BRIDGE_TOKEN__";
+const BRIDGE_ENDPOINTS = [
+  { label: "公网老K桥", baseUrl: "https://agent.debetter.com/rokid-laok-native" },
+  { label: "局域网老K桥", baseUrl: "http://192.168.60.5:8766" }
+];
 const STABLE_SESSION_ID = "aiui-laok-native-tony-main";
 
 function parseJsonResponse(data) {
@@ -72,13 +75,39 @@ function inferAction(query = {}) {
   return "connect";
 }
 
-async function postJson(url, payload) {
+function configuredBridgeToken() {
+  return BRIDGE_AUTH_TOKEN && !BRIDGE_AUTH_TOKEN.startsWith("__") ? BRIDGE_AUTH_TOKEN : "";
+}
+
+function bridgeHeaders() {
+  const headers = { "content-type": "application/json" };
+  const token = configuredBridgeToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+async function postJson(endpoint, payload) {
+  const failures = [];
+  for (const bridge of BRIDGE_ENDPOINTS) {
+    try {
+      return await postJsonToBridge(bridge, endpoint, payload);
+    } catch (error) {
+      failures.push(`${bridge.label}:${error && error.message ? error.message : String(error)}`);
+    }
+  }
+  throw new Error(failures.join("；"));
+}
+
+async function postJsonToBridge(bridge, endpoint, payload) {
   return new Promise((resolve, reject) => {
     wx.request({
-      url,
+      url: `${bridge.baseUrl}${endpoint}`,
       method: "POST",
       dataType: "json",
-      header: { "content-type": "application/json" },
+      timeout: 15000,
+      header: bridgeHeaders(),
       data: payload,
       success: (res) => {
         try {
@@ -87,6 +116,7 @@ async function postJson(url, payload) {
             reject(new Error(body.error || `bridge_http_${res.statusCode}`));
             return;
           }
+          body.bridge_label = bridge.label;
           resolve(body);
         } catch (error) {
           reject(error);
@@ -183,7 +213,7 @@ export default {
     if (this.data.busy) return;
     this.setData({ busy: true, statusText: "正在连接老K", relayText: "" });
     try {
-      const body = await postJson(TURN_URL, {
+      const body = await postJson("/v1/session/turn", {
         session_id: this.data.sessionId,
         utterance: query.utterance || "老K，AIUI 原生 Agent 桥接已启动。记住当前任务是验证眼镜原生 Agent 加本地能力桥。",
         channel: "rokid_aiui_native"
@@ -206,7 +236,7 @@ export default {
     if (this.data.busy) return;
     this.setData({ busy: true, statusText: "正在查本地文件", relayText: "" });
     try {
-      const body = await postJson(TURN_URL, {
+      const body = await postJson("/v1/session/turn", {
         session_id: this.data.sessionId,
         utterance: query.utterance || `老K，查文件 ${query.query || "Reference"}。`,
         capability: "file.search",
@@ -232,7 +262,7 @@ export default {
     if (this.data.busy) return;
     this.setData({ busy: true, statusText: "正在查记忆", relayText: "" });
     try {
-      const body = await postJson(TURN_URL, {
+      const body = await postJson("/v1/session/turn", {
         session_id: this.data.sessionId,
         utterance: query.utterance || `老K，查记忆 ${query.query || "Rokid 老K"}。`,
         capability: "memory.search",
@@ -269,7 +299,7 @@ export default {
         throw new Error("照片数据为空");
       }
       this.setData({ statusText: "正在分析眼前画面" });
-      const body = await postJson(TURN_URL, {
+      const body = await postJson("/v1/session/turn", {
         image_base64: imageBase64,
         mime_type: photo.mimeType || "image/jpeg",
         session_id: this.data.sessionId,
