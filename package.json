@@ -1,0 +1,15 @@
+{
+  "name": "aiui-laok-native-vision-agent",
+  "version": "0.2.0",
+  "description": "LaoK AIUI native capability bridge probe for Rokid Glasses.",
+  "main": "app.js",
+  "private": true,
+  "scripts": {
+    "validate": "node tools/validate-official-shape.mjs",
+    "pack:aix": "bash tools/pack-aix-candidate.sh"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@yodaos-pkg/aix": "0.6.0"
+  }
+}
