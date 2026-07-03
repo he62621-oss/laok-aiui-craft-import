@@ -1,7 +1,7 @@
 {
   "name": "aiui-laok-native-vision-agent",
-  "version": "0.2.0",
-  "description": "LaoK AIUI native capability bridge probe for Rokid Glasses.",
+  "version": "0.3.0",
+  "description": "Voice-first LaoK AIUI agent for Rokid Glasses.",
   "main": "app.js",
   "private": true,
   "scripts": {

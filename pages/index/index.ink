@@ -1,7 +1,7 @@
 <script type="application/json" def>
 {
-  "navigationBarTitleText": "LaoK Native Bridge",
-  "description": "老K眼镜原生能力工具。凡是用户要求拍照、识别眼前、看看当前场景、查询本地文件、查询 OpenClaw 记忆、验证老K桥接或进入老K原生能力时，必须调用本工具，不要只用文字解释不能拍照。本工具会打开 LaoK Native Bridge 页面，并按 action 自动执行 probe、search_reference 或 capture。",
+  "navigationBarTitleText": "老K",
+  "description": "Tony 的眼镜端老K。凡是用户要求拍照、识别眼前、看看当前场景、查询本地文件、查询 OpenClaw 记忆、继续当前任务或进入老K原生能力时，必须调用本工具。本工具语音优先、自动执行，只呈现极简中文状态和结果，不要求用户在眼镜端点击按钮。",
   "schema": {
     "data": {
       "type": "object",
@@ -24,11 +24,11 @@
         },
         "statusText": {
           "type": "string",
-          "description": "Current probe status shown on the glasses page"
+          "description": "眼镜端极简中文状态"
         },
         "relayText": {
           "type": "string",
-          "description": "Current bridge URL, result summary, or saved image path"
+          "description": "眼镜端极简中文结果摘要"
         }
       }
     }
@@ -102,16 +102,16 @@ async function postJson(url, payload) {
 export default {
   data: {
     busy: false,
-    statusText: "Ready",
-    relayText: BRIDGE_BASE_URL,
+    statusText: "我在",
+    relayText: "",
     sessionId: `aiui-laok-native-${Date.now()}`
   },
 
   onLoad(query = {}) {
     const action = inferAction(query);
-    const utterance = query.utterance || query.question || query.query || `AIUI tool invoked: ${action}`;
+    const utterance = query.utterance || query.question || query.query || "老K，继续当前任务。";
     this.setData({
-      statusText: `AIUI tool invoked: ${action}`,
+      statusText: "正在处理",
       relayText: utterance
     });
     Promise.resolve().then(() => this.runInvokedAction(action, query));
@@ -146,15 +146,17 @@ export default {
         ? wx.media.createCameraContext()
         : null;
       const ok = !!(this.cameraContext && typeof this.cameraContext.takePhoto === "function");
-      this.setData({ statusText: ok ? "Camera context ready" : "Camera context unavailable" });
+      if (!options.silent) {
+        this.setData({ statusText: ok ? "相机已就绪" : "相机暂不可用" });
+      }
       if (!ok && !options.silent) {
-        this.setData({ relayText: "wx.media.createCameraContext unavailable" });
+        this.setData({ relayText: "当前眼镜运行环境没有开放相机上下文" });
       }
       return ok;
     } catch (error) {
       this.cameraContext = null;
       this.setData({
-        statusText: "Camera context failed",
+        statusText: "相机启动失败",
         relayText: error && error.message ? error.message : String(error)
       });
       return false;
@@ -179,7 +181,7 @@ export default {
 
   async probeBridge(query = {}) {
     if (this.data.busy) return;
-    this.setData({ busy: true, statusText: "Probing LaoK native bridge..." });
+    this.setData({ busy: true, statusText: "正在连接老K", relayText: "" });
     try {
       const body = await postJson(TURN_URL, {
         session_id: this.data.sessionId,
@@ -187,12 +189,13 @@ export default {
         channel: "rokid_aiui_native"
       });
       this.setData({
-        statusText: body.answer_brief || "Bridge accepted",
-        relayText: `turns=${body.work_memory && body.work_memory.turn_count}`
+        statusText: body.answer_brief || "已接入老K",
+        relayText: "可以继续问我"
       });
     } catch (error) {
       this.setData({
-        statusText: `Bridge failed: ${error && error.message ? error.message : String(error)}`
+        statusText: "老K连接失败",
+        relayText: error && error.message ? error.message : String(error)
       });
     } finally {
       this.setData({ busy: false });
@@ -201,7 +204,7 @@ export default {
 
   async searchReference(query = {}) {
     if (this.data.busy) return;
-    this.setData({ busy: true, statusText: "Searching local Reference files..." });
+    this.setData({ busy: true, statusText: "正在查本地文件", relayText: "" });
     try {
       const body = await postJson(TURN_URL, {
         session_id: this.data.sessionId,
@@ -211,12 +214,13 @@ export default {
       });
       const matches = (body.capability_result && body.capability_result.matches) || [];
       this.setData({
-        statusText: `Local file search returned ${matches.length} matches`,
-        relayText: matches[0] ? matches[0].path : "No match"
+        statusText: matches.length ? `找到 ${matches.length} 条` : "没有找到",
+        relayText: matches[0] ? matches[0].path : "可以换个关键词继续查"
       });
     } catch (error) {
       this.setData({
-        statusText: `Search failed: ${error && error.message ? error.message : String(error)}`
+        statusText: "本地文件查询失败",
+        relayText: error && error.message ? error.message : String(error)
       });
     } finally {
       this.setData({ busy: false });
@@ -225,7 +229,7 @@ export default {
 
   async searchMemory(query = {}) {
     if (this.data.busy) return;
-    this.setData({ busy: true, statusText: "Searching OpenClaw memory..." });
+    this.setData({ busy: true, statusText: "正在查记忆", relayText: "" });
     try {
       const body = await postJson(TURN_URL, {
         session_id: this.data.sessionId,
@@ -235,12 +239,13 @@ export default {
       });
       const ok = body.capability_result && body.capability_result.ok;
       this.setData({
-        statusText: ok ? "OpenClaw memory search returned" : "OpenClaw memory search failed",
-        relayText: body.answer_brief || "memory.search"
+        statusText: ok ? "记忆已查到" : "记忆查询失败",
+        relayText: body.answer_brief || "可以继续补充关键词"
       });
     } catch (error) {
       this.setData({
-        statusText: `Memory failed: ${error && error.message ? error.message : String(error)}`
+        statusText: "记忆查询失败",
+        relayText: error && error.message ? error.message : String(error)
       });
     } finally {
       this.setData({ busy: false });
@@ -250,18 +255,18 @@ export default {
   async captureAndSend(query = {}) {
     if (this.data.busy) return;
     if (!this.ensureCameraContext()) {
-      this.setData({ statusText: "Camera context is not ready" });
+      this.setData({ statusText: "相机暂不可用", relayText: "请稍后再试" });
       return;
     }
 
-    this.setData({ busy: true, statusText: "Taking photo..." });
+    this.setData({ busy: true, statusText: "正在看", relayText: "" });
     try {
       const photo = await this.cameraContext.takePhoto({ quality: "high" });
       const imageBase64 = wx.arrayBufferToBase64(photo.data);
       if (!imageBase64) {
-        throw new Error("empty image data");
+        throw new Error("照片数据为空");
       }
-      this.setData({ statusText: `Uploading ${photo.mimeType || "image/jpeg"}...` });
+      this.setData({ statusText: "正在分析眼前画面" });
       const body = await postJson(PHOTO_URL, {
         image_base64: imageBase64,
         mime_type: photo.mimeType || "image/jpeg",
@@ -269,12 +274,13 @@ export default {
         question: query.question || query.utterance || "老K，基于这张眼镜当前视野照片，简短说明眼前是什么。"
       });
       this.setData({
-        statusText: `Bridge accepted ${body.bytes || 0} bytes`,
-        relayText: body.saved_image || PHOTO_URL
+        statusText: body.answer_brief || "已看到",
+        relayText: "可以继续追问"
       });
     } catch (error) {
       this.setData({
-        statusText: `Capture failed: ${error && error.message ? error.message : String(error)}`
+        statusText: "识别失败",
+        relayText: error && error.message ? error.message : String(error)
       });
     } finally {
       this.setData({ busy: false });
@@ -285,18 +291,12 @@ export default {
 
 <page>
   <view class="page">
-    <view class="status">
-      <text class="title">LaoK Bridge</text>
-      <text class="line">{{ statusText }}</text>
-      <text class="line small">{{ relayText }}</text>
-    </view>
-
     <camera id="laokCamera" class="camera"></camera>
 
-    <view class="actions">
-      <button class="secondary" bindtap="probeBridge">Probe Bridge</button>
-      <button class="secondary" bindtap="searchReference">Search Reference</button>
-      <button class="primary" bindtap="captureAndSend">{{ busy ? "Sending..." : "Capture" }}</button>
+    <view class="status">
+      <text class="title">老K</text>
+      <text class="line">{{ statusText }}</text>
+      <text class="line small">{{ relayText }}</text>
     </view>
   </view>
 </page>
@@ -305,63 +305,44 @@ export default {
 .page {
   min-height: 100vh;
   padding: 28rpx;
-  background: #101820;
-  color: #f7f7f2;
+  background: transparent;
+  color: #21f36b;
 }
 
 .status {
-  margin-bottom: 20rpx;
+  position: absolute;
+  left: 28rpx;
+  right: 28rpx;
+  bottom: 34rpx;
+  padding: 12rpx 0;
 }
 
 .title {
   display: block;
-  font-size: 34rpx;
+  font-size: 28rpx;
   font-weight: 700;
-  margin-bottom: 12rpx;
+  margin-bottom: 8rpx;
 }
 
 .line {
   display: block;
   font-size: 24rpx;
-  line-height: 1.5;
-  color: #dfe7e2;
+  line-height: 1.45;
+  color: #21f36b;
 }
 
 .small {
+  margin-top: 6rpx;
   font-size: 20rpx;
-  color: #9fb1aa;
+  color: #b8ffd0;
 }
 
 .camera {
-  width: 424rpx;
-  height: 240rpx;
-  background: #000;
-  border-radius: 8rpx;
-  overflow: hidden;
-}
-
-.actions {
-  margin-top: 22rpx;
-  display: flex;
-  gap: 12rpx;
-  flex-wrap: wrap;
-}
-
-.primary,
-.secondary {
-  width: 220rpx;
-  height: 64rpx;
-  line-height: 64rpx;
-  border-radius: 8rpx;
-  color: #ffffff;
-  font-size: 22rpx;
-}
-
-.primary {
-  background: #2fb344;
-}
-
-.secondary {
-  background: #243642;
+  position: absolute;
+  left: -20rpx;
+  top: -20rpx;
+  width: 1rpx;
+  height: 1rpx;
+  opacity: 0;
 }
 </style>

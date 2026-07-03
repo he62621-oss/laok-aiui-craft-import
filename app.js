@@ -1,5 +1,5 @@
 export default {
   onLaunch() {
-    console.log("LaoK AIUI vision probe launched");
+    console.log("LaoK AIUI agent launched");
   }
 };
