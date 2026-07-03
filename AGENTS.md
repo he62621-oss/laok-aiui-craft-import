@@ -18,10 +18,10 @@
   - network
   - storage
 - **Skills**:
-  - `laok.bridge.probe`: Verify that the AIUI page can call the local LaoK native capability bridge.
+  - `laok.bridge.connect`: Verify that the AIUI page can call the local LaoK native capability bridge.
   - `laok.file.search`: Trigger read-only local file search through the bridge.
-  - `camera.takePhoto`: Capture the current glasses camera frame through AIUI camera APIs.
-  - `network.http`: Send probe, search, and captured image payloads to the configured LaoK bridge endpoint.
+  - `camera.currentFrame`: Read the current glasses camera frame through AIUI camera APIs.
+  - `network.http`: Send connect, search, and current-frame payloads to the configured LaoK bridge endpoint.
 
 ## Configuration
 
@@ -34,8 +34,8 @@ This agent is not complete until a real Rokid Glasses AIUI debugging session pro
 
 - The user-visible agent name is only `老K`; no duplicate `老K` entries remain in the active glasses agent list.
 - Voice-triggered current-view recognition opens no manual button console and produces a concise Chinese status/result.
-- The bridge probe creates a new event in `rokid-native-agent-bridge-events.jsonl`.
+- The bridge connect action creates a new event in `rokid-native-agent-bridge-events.jsonl`.
 - Local file search returns results through the bridge without exposing engineering UI to the user.
 - `CameraContext.takePhoto` returns non-empty image bytes.
 - `/v1/vision/photo` receives `bytes > 0` from the AIUI runtime.
-- LaoK does not answer visual questions when capture or bridge upload fails.
+- LaoK does not answer visual questions when current-frame capture or bridge upload fails.

@@ -1,0 +1,9 @@
+README*
+AGENTS.md
+.DS_Store
+.aixignore
+.gitignore
+dist/
+tools/
+node_modules/
+package-lock.json
