@@ -7,8 +7,9 @@ This repository intentionally contains no credentials, tokens, or private runtim
 ## 2026-07-04 Status
 
 - User-visible name: `老K`
-- Native version uploaded to Craft: `1.0.3`
-- Cloud AIX MD5: `010748d2baf5d552c83e54ba7be201fe`
-- Cloud AIX SHA-256: `7b3098d0bad8db2f66b99579f8b74fc87cc06bedfb242126a30a9a0abd9cdca0`
+- Current source version: `0.4.0+codex.20260704-fast`
+- Last native version uploaded to Craft before this source update: `1.0.3`
 - Runtime UI has no visible `Probe Bridge`, `Search Reference`, or `Capture` buttons.
 - Old Lingzhu SSE fallback was renamed to `老K旧通道` to avoid competing with the `老K` wake name.
+- Capture now posts directly to `/v1/session/turn` with stable session `aiui-laok-native-tony-main`, `fast: true`, and `vision_timeout: 8`.
+- The local bridge is expected to degrade quickly and truthfully if GLM vision times out instead of blocking the glasses UI.

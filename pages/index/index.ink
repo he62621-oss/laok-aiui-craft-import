@@ -8,7 +8,7 @@
       "properties": {
         "action": {
           "type": "string",
-          "description": "要执行的动作。拍照、识别眼前、看当前场景时传 capture；查 Reference、本地文件时传 search_reference；验证桥接、进入老K原生能力时传 probe；不确定时传 probe。"
+          "description": "要执行的动作。拍照、识别眼前、看当前场景时传 capture；查 Reference、本地文件时传 search_reference；查 OpenClaw 记忆时传 memory_search；验证桥接、进入老K原生能力时传 probe；不确定时传 probe。"
         },
         "utterance": {
           "type": "string",
@@ -41,7 +41,7 @@ import wx from 'wx';
 
 const BRIDGE_BASE_URL = "http://192.168.60.5:8766";
 const TURN_URL = `${BRIDGE_BASE_URL}/v1/session/turn`;
-const PHOTO_URL = `${BRIDGE_BASE_URL}/v1/vision/photo`;
+const STABLE_SESSION_ID = "aiui-laok-native-tony-main";
 
 function parseJsonResponse(data) {
   if (data && typeof data === "object") {
@@ -104,7 +104,7 @@ export default {
     busy: false,
     statusText: "我在",
     relayText: "",
-    sessionId: `aiui-laok-native-${Date.now()}`
+    sessionId: STABLE_SESSION_ID
   },
 
   onLoad(query = {}) {
@@ -185,7 +185,7 @@ export default {
     try {
       const body = await postJson(TURN_URL, {
         session_id: this.data.sessionId,
-        utterance: query.utterance || "老K，AIUI 原生 Agent 桥接探针已启动。记住当前任务是验证眼镜原生 Agent 加本地能力桥。",
+        utterance: query.utterance || "老K，AIUI 原生 Agent 桥接已启动。记住当前任务是验证眼镜原生 Agent 加本地能力桥。",
         channel: "rokid_aiui_native"
       });
       this.setData({
@@ -212,10 +212,11 @@ export default {
         capability: "file.search",
         args: { query: query.query || "Reference", limit: 8 }
       });
-      const matches = (body.capability_result && body.capability_result.matches) || [];
+      const fileResult = body.capability_result && body.capability_result.file;
+      const matches = (fileResult && fileResult.matches) || [];
       this.setData({
-        statusText: matches.length ? `找到 ${matches.length} 条` : "没有找到",
-        relayText: matches[0] ? matches[0].path : "可以换个关键词继续查"
+        statusText: body.answer_brief || (matches.length ? `找到 ${matches.length} 条` : "没有找到"),
+        relayText: matches[0] ? "已结合文件结果回答" : "可以换个关键词继续查"
       });
     } catch (error) {
       this.setData({
@@ -237,9 +238,10 @@ export default {
         capability: "memory.search",
         args: { query: query.query || query.utterance || "Rokid 老K", top: 5 }
       });
-      const ok = body.capability_result && body.capability_result.ok;
+      const memoryResult = body.capability_result && body.capability_result.memory;
+      const ok = memoryResult && memoryResult.ok;
       this.setData({
-        statusText: ok ? "记忆已查到" : "记忆查询失败",
+        statusText: body.answer_brief || (ok ? "记忆已查到" : "记忆查询失败"),
         relayText: body.answer_brief || "可以继续补充关键词"
       });
     } catch (error) {
@@ -267,11 +269,16 @@ export default {
         throw new Error("照片数据为空");
       }
       this.setData({ statusText: "正在分析眼前画面" });
-      const body = await postJson(PHOTO_URL, {
+      const body = await postJson(TURN_URL, {
         image_base64: imageBase64,
         mime_type: photo.mimeType || "image/jpeg",
         session_id: this.data.sessionId,
-        question: query.question || query.utterance || "老K，基于这张眼镜当前视野照片，简短说明眼前是什么。"
+        utterance: query.question || query.utterance || "老K，基于这张眼镜当前视野照片，简短说明眼前是什么。",
+        question: query.question || query.utterance || "老K，基于这张眼镜当前视野照片，简短说明眼前是什么。",
+        capability: "vision.photo",
+        analyze: true,
+        fast: true,
+        vision_timeout: 8
       });
       this.setData({
         statusText: body.answer_brief || "已看到",
