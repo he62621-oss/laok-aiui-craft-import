@@ -77,7 +77,12 @@ if (defBlocks[0]) {
   try {
     const def = JSON.parse(defBlocks[0].body);
     assertOk(typeof def.description === "string" && def.description.length > 20, "page def.description should describe the UI");
+    assertOk(def.description.includes("任何一句话都必须调用本工具"), "page def.description must force all LaoK turns through the AIUI tool");
+    assertOk(def.description.includes("不得让平台默认模型直接回答"), "page def.description must reject platform default-model answers");
     assertOk(def.schema?.data?.type === "object", "page def.schema.data.type must be object");
+    assertOk(Array.isArray(def.schema?.data?.required) && def.schema.data.required.includes("utterance"), "schema.data.required must include utterance");
+    assertOk(Array.isArray(def.schema?.data?.properties?.action?.enum), "schema.data.properties.action.enum is required");
+    assertOk(def.schema.data.properties.action.enum.includes("connect"), "action enum must include connect for ordinary dialogue");
     assertOk(def.schema?.data?.properties?.statusText, "schema.data.properties.statusText is required");
     assertOk(def.schema?.data?.properties?.relayText, "schema.data.properties.relayText is required");
   } catch (error) {
@@ -90,6 +95,9 @@ assertOk(ink.includes("wx.request"), "index.ink must use wx.request for bridge c
 assertOk(ink.includes("https://agent.debetter.com/rokid-laok-native"), "index.ink must include the public HTTPS LaoK bridge endpoint");
 assertOk(ink.includes("Authorization"), "index.ink must send bridge authorization for protected native capabilities");
 assertOk(ink.includes("BRIDGE_ENDPOINTS"), "index.ink must use endpoint failover instead of a single LAN-only bridge URL");
+assertOk(ink.includes("NATIVE_CONTRACT_VERSION"), "index.ink must send a native contract version for real-device observability");
+assertOk(ink.includes("laok-aiui-native-contract-20260704-v2"), "index.ink must use the current native contract version");
+assertOk(ink.includes("source: \"rokid_aiui_tool\""), "index.ink must identify AIUI tool-originated bridge calls");
 assertOk(ink.includes("wx.createCameraContext"), "index.ink must prefer the official wx.createCameraContext API");
 assertOk(ink.includes("wx.media.createCameraContext"), "index.ink should keep wx.media.createCameraContext as a compatibility fallback");
 assertOk(ink.includes(".takePhoto("), "index.ink must call CameraContext.takePhoto");
@@ -124,6 +132,7 @@ if (fs.existsSync(aixPath)) {
   const tools = aix.get_tools();
   assertOk(aix.get_title() === app?.window?.navigationBarTitleText, "AIX title should match app.json window.navigationBarTitleText");
   assertOk(files.includes("pages/index/index.ink"), "AIX must include pages/index/index.ink");
+  assertOk(!files.some((name) => name === ".git/" || name.startsWith(".git/")), "AIX must not include .git");
   assertOk(!files.some((name) => name === "node_modules/" || name.startsWith("node_modules/")), "AIX must not include node_modules");
   assertOk(!files.includes("package-lock.json"), "AIX must not include package-lock.json");
   assertOk(!files.some((name) => name === "tools/" || name.startsWith("tools/")), "AIX must not include build tools");

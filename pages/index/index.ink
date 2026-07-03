@@ -1,22 +1,24 @@
 <script type="application/json" def>
 {
   "navigationBarTitleText": "老K",
-  "description": "Tony 的眼镜端老K。凡是用户要求拍照、识别眼前、看看当前场景、查询本地文件、查询 OpenClaw 记忆、继续当前任务或进入老K原生能力时，必须调用本工具。本工具语音优先、自动执行，只呈现极简中文状态和结果，不要求用户在眼镜端点击按钮。",
+  "description": "Tony 的眼镜端老K不是普通聊天模型。用户对老K说的任何一句话都必须调用本工具：普通问答/身份/继续任务传 connect，拍照/识别眼前传 capture，查 OpenClaw 记忆传 memory_search，查本地电脑文件传 file_search。本工具语音优先、自动执行、极简呈现，负责把用户原话转交 OpenClaw 统一老K主脑和本地能力桥；不得让平台默认模型直接回答。",
   "schema": {
     "data": {
       "type": "object",
+      "required": ["utterance"],
       "properties": {
         "action": {
           "type": "string",
-          "description": "要执行的动作。拍照、识别眼前、看当前场景时传 capture；查 Reference、本地文件时传 file_search；查 OpenClaw 记忆时传 memory_search；进入老K原生能力时传 connect；不确定时传 connect。"
+          "enum": ["connect", "capture", "file_search", "memory_search"],
+          "description": "要执行的动作。普通问答、身份确认、继续上下文、泛问题、不确定时都必须传 connect；拍照、识别眼前、看当前场景时传 capture；查 Reference、本地文件时传 file_search；查 OpenClaw 记忆时传 memory_search。"
         },
         "utterance": {
           "type": "string",
-          "description": "用户原始说法，用于老K工作记忆和动作兜底判断"
+          "description": "必须逐字传入用户对老K说的原始完整句子。不能省略，不能改写成摘要。"
         },
         "query": {
           "type": "string",
-          "description": "本地文件或记忆查询关键词，默认 Reference"
+          "description": "本地文件或记忆查询关键词。只有 file_search 或 memory_search 时填写；普通问答不要把整句误放到 query。"
         },
         "question": {
           "type": "string",
@@ -45,6 +47,7 @@ const BRIDGE_ENDPOINTS = [
   { label: "局域网老K桥", baseUrl: "http://192.168.60.5:8766" }
 ];
 const STABLE_SESSION_ID = "aiui-laok-native-tony-main";
+const NATIVE_CONTRACT_VERSION = "laok-aiui-native-contract-20260704-v2";
 
 function parseJsonResponse(data) {
   if (data && typeof data === "object") {
@@ -220,7 +223,9 @@ export default {
       const body = await postJson("/v1/session/turn", {
         session_id: this.data.sessionId,
         utterance: query.utterance || "老K，AIUI 原生 Agent 桥接已启动。记住当前任务是验证眼镜原生 Agent 加本地能力桥。",
-        channel: "rokid_aiui_native"
+        channel: "rokid_aiui_native",
+        source: "rokid_aiui_tool",
+        native_contract_version: NATIVE_CONTRACT_VERSION
       });
       this.setData({
         statusText: body.answer_brief || "已接入老K",
@@ -243,6 +248,9 @@ export default {
       const body = await postJson("/v1/session/turn", {
         session_id: this.data.sessionId,
         utterance: query.utterance || `老K，查文件 ${query.query || "Reference"}。`,
+        channel: "rokid_aiui_native",
+        source: "rokid_aiui_tool",
+        native_contract_version: NATIVE_CONTRACT_VERSION,
         capability: "file.search",
         args: { query: query.query || "Reference", limit: 8 }
       });
@@ -269,6 +277,9 @@ export default {
       const body = await postJson("/v1/session/turn", {
         session_id: this.data.sessionId,
         utterance: query.utterance || `老K，查记忆 ${query.query || "Rokid 老K"}。`,
+        channel: "rokid_aiui_native",
+        source: "rokid_aiui_tool",
+        native_contract_version: NATIVE_CONTRACT_VERSION,
         capability: "memory.search",
         args: { query: query.query || query.utterance || "Rokid 老K", top: 5 }
       });
@@ -309,6 +320,9 @@ export default {
         session_id: this.data.sessionId,
         utterance: query.question || query.utterance || "老K，基于这张眼镜当前视野照片，简短说明眼前是什么。",
         question: query.question || query.utterance || "老K，基于这张眼镜当前视野照片，简短说明眼前是什么。",
+        channel: "rokid_aiui_native",
+        source: "rokid_aiui_tool",
+        native_contract_version: NATIVE_CONTRACT_VERSION,
         capability: "vision.photo",
         analyze: true,
         fast: true,

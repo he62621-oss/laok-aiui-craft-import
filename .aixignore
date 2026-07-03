@@ -1,6 +1,8 @@
 README*
 AGENTS.md
 .DS_Store
+.git/
+.git/**
 .aixignore
 .gitignore
 dist/
