@@ -172,9 +172,13 @@ export default {
     }
 
     try {
-      this.cameraContext = wx.media && typeof wx.media.createCameraContext === "function"
-        ? wx.media.createCameraContext()
-        : null;
+      if (typeof wx.createCameraContext === "function") {
+        this.cameraContext = wx.createCameraContext("laokCamera");
+      } else if (wx.media && typeof wx.media.createCameraContext === "function") {
+        this.cameraContext = wx.media.createCameraContext("laokCamera");
+      } else {
+        this.cameraContext = null;
+      }
       const ok = !!(this.cameraContext && typeof this.cameraContext.takePhoto === "function");
       if (!options.silent) {
         this.setData({ statusText: ok ? "相机已就绪" : "相机暂不可用" });
