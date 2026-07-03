@@ -8,7 +8,7 @@
       "properties": {
         "action": {
           "type": "string",
-          "description": "要执行的动作。拍照、识别眼前、看当前场景时传 capture；查 Reference、本地文件时传 search_reference；查 OpenClaw 记忆时传 memory_search；验证桥接、进入老K原生能力时传 probe；不确定时传 probe。"
+          "description": "要执行的动作。拍照、识别眼前、看当前场景时传 capture；查 Reference、本地文件时传 file_search；查 OpenClaw 记忆时传 memory_search；进入老K原生能力时传 connect；不确定时传 connect。"
         },
         "utterance": {
           "type": "string",
@@ -64,12 +64,12 @@ function inferAction(query = {}) {
     return "capture";
   }
   if (/Reference|查文件|找文件|本地文件|file/i.test(text)) {
-    return "search_reference";
+    return "file_search";
   }
   if (/记忆|OpenClaw|查记忆|memory/i.test(text)) {
     return "memory_search";
   }
-  return "probe";
+  return "connect";
 }
 
 async function postJson(url, payload) {
@@ -168,18 +168,18 @@ export default {
       await this.captureAndSend(query);
       return;
     }
-    if (action === "search_reference") {
-      await this.searchReference(query);
+    if (action === "file_search") {
+      await this.searchLocalFiles(query);
       return;
     }
     if (action === "memory_search") {
       await this.searchMemory(query);
       return;
     }
-    await this.probeBridge(query);
+    await this.connectBridge(query);
   },
 
-  async probeBridge(query = {}) {
+  async connectBridge(query = {}) {
     if (this.data.busy) return;
     this.setData({ busy: true, statusText: "正在连接老K", relayText: "" });
     try {
@@ -202,7 +202,7 @@ export default {
     }
   },
 
-  async searchReference(query = {}) {
+  async searchLocalFiles(query = {}) {
     if (this.data.busy) return;
     this.setData({ busy: true, statusText: "正在查本地文件", relayText: "" });
     try {
